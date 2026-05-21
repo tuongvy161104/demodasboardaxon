@@ -491,65 +491,23 @@ if N_camp > 0 and total_spend > 0:
         "Đang scale": "#10b981"
     }
     
-    col_stat1, col_stat2, col_chart = st.columns([3, 3, 6])
+    fig_spend = go.Figure()
     
-    with col_stat1:
-        dang_scale = category_counts.loc[category_counts["Category"] == "Đang scale", "Count"].values[0]
-        co_tin_hieu = category_counts.loc[category_counts["Category"] == "Có tín hiệu scale", "Count"].values[0]
-        
-        st.markdown(f"""
-        <div style="background:#ecfdf5; border:1px solid #10b981; border-radius:12px; padding:18px; text-align:center; height:105px; margin-bottom:12px; box-shadow:0 2px 8px rgba(16,185,129,0.06);">
-            <div style="font-size:11px; font-weight:700; color:#059669; text-transform:uppercase; letter-spacing:0.5px;">🔥 ĐANG SCALE</div>
-            <div style="font-size:32px; font-weight:800; color:#047857; margin-top:2px;">{dang_scale} <span style="font-size:14px; font-weight:500; color:#059669;">camps</span></div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown(f"""
-        <div style="background:#fffbeb; border:1px solid #f59e0b; border-radius:12px; padding:18px; text-align:center; height:105px; box-shadow:0 2px 8px rgba(245,158,11,0.06);">
-            <div style="font-size:11px; font-weight:700; color:#d97706; text-transform:uppercase; letter-spacing:0.5px;">⚡ CÓ TÍN HIỆU SCALE</div>
-            <div style="font-size:32px; font-weight:800; color:#b45309; margin-top:2px;">{co_tin_hieu} <span style="font-size:14px; font-weight:500; color:#d97706;">camps</span></div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    with col_stat2:
-        chua_day = category_counts.loc[category_counts["Category"] == "Chưa đẩy spend", "Count"].values[0]
-        avg_spend_per_camp = total_spend / N_camp
-        
-        st.markdown(f"""
-        <div style="background:#fef2f2; border:1px solid #ef4444; border-radius:12px; padding:18px; text-align:center; height:105px; margin-bottom:12px; box-shadow:0 2px 8px rgba(239,68,68,0.06);">
-            <div style="font-size:11px; font-weight:700; color:#dc2626; text-transform:uppercase; letter-spacing:0.5px;">💤 CHƯA ĐẨY SPEND</div>
-            <div style="font-size:32px; font-weight:800; color:#b91c1c; margin-top:2px;">{chua_day} <span style="font-size:14px; font-weight:500; color:#dc2626;">camps</span></div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown(f"""
-        <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:12px; padding:18px; text-align:center; height:105px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
-            <div style="font-size:11px; font-weight:700; color:#4b5563; text-transform:uppercase; letter-spacing:0.5px;">📊 SPEND TRUNG BÌNH</div>
-            <div style="font-size:26px; font-weight:800; color:#1f2937; margin-top:6px;">${avg_spend_per_camp:,.0f} <span style="font-size:14px; font-weight:500; color:#4b5563;">/ camp</span></div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col_chart:
-        fig_spend = go.Figure()
-        
-        fig_spend.add_trace(go.Bar(
-            y=category_counts["Category"],
-            x=category_counts["Count"],
-            orientation="h",
-            marker=dict(
-                color=[category_colors[cat] for cat in category_counts["Category"]],
-                line=dict(color="rgba(255,255,255,0.6)", width=1.5)
-            ),
-            text=category_counts.apply(lambda r: f" {r['Count']} camps ({r['Percentage']:.1f}%)", axis=1),
-            textposition="outside",
-            hoverinfo="none"
-        ))
-        
-        layout_spend = get_plotly_layout("Phân bổ số lượng Campaigns theo mức độ Spend")
-        fig_spend.update_layout(**layout_spend, height=222)
-        fig_spend.update_xaxes(showgrid=False, visible=False)
-        fig_spend.update_yaxes(autorange="reversed")
-        st.plotly_chart(fig_spend, use_container_width=True)
+    fig_spend.add_trace(go.Bar(
+        x=category_counts["Category"],
+        y=category_counts["Count"],
+        marker=dict(
+            color=[category_colors[cat] for cat in category_counts["Category"]],
+            line=dict(color="rgba(255,255,255,0.6)", width=1.5)
+        ),
+        text=category_counts.apply(lambda r: f"{r['Count']} camps ({r['Percentage']:.1f}%)" if r['Count'] > 0 else "", axis=1),
+        textposition="outside",
+        hovertemplate="<b>%{x}</b><br>Số lượng: %{y} campaigns<extra></extra>"
+    ))
+    
+    layout_spend = get_plotly_layout("Phân bổ số lượng Campaigns theo mức độ Spend")
+    fig_spend.update_layout(**layout_spend, height=320, yaxis_title="Số lượng Campaigns")
+    st.plotly_chart(fig_spend, use_container_width=True)
 
 else:
     st.info("⚠️ Không có đủ dữ liệu để tính toán phân bổ Spend.")
