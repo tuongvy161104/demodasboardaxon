@@ -391,6 +391,8 @@ total_cost = df["cost"].sum()
 total_revenue = df["sRevenue"].sum()
 total_profit = df["sProfit"].sum()
 total_orders = df["sOrders"].sum()
+avg_sroas = df["sROAS"].mean() if df["sROAS"].notna().any() else 0
+avg_beroas = df["beROAS"].mean() if df["beROAS"].notna().any() else 0
 
 kpis = [
     ("🎯 Total Campaigns", f"{total_campaigns:,}", "campaigns"),
@@ -398,13 +400,18 @@ kpis = [
     ("📈 sRevenue", f"${total_revenue:,.0f}", "shopify revenue"),
     ("💎 sProfit", f"${total_profit:,.0f}", "net profit"),
     ("🛒 sOrders", f"{total_orders:,.0f}", "shopify orders"),
+    ("⚡ sROAS", f"{avg_sroas:.2f}", "avg shopify ROAS"),
 ]
 
-cols = st.columns(5)
+cols = st.columns(6)
 for col, (label, value, sub) in zip(cols, kpis):
     with col:
-        color = "#059669" if "Profit" in label and total_profit > 0 else \
-                "#dc2626" if "Profit" in label and total_profit < 0 else "#1e1b4b"
+        if "Profit" in label:
+            color = "#059669" if total_profit > 0 else "#dc2626"
+        elif "sROAS" in label:
+            color = "#059669" if avg_sroas >= avg_beroas else "#dc2626"
+        else:
+            color = "#1e1b4b"
         st.markdown(f"""
         <div class="kpi-card">
             <div class="kpi-label">{label}</div>
