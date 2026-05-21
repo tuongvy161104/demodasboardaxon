@@ -809,3 +809,39 @@ with col_br:
         fig_bot_profit, use_container_width=True,
     )
     st.caption("🟢 sROAS > beROAS &nbsp;&nbsp; 🔴 sROAS ≤ beROAS")
+
+# ─────────────────────────────────────────────
+# Raw data expander
+# ─────────────────────────────────────────────
+with st.expander("📋 Full Campaign List", expanded=False):
+    st.info(f"🔍 Showing all **{len(df)}** campaigns")
+
+    display_cols = ["campaignName", "cost", "sOrders", "sRevenue", "sProfit", "sROAS", "beROAS"]
+    df_display = df[display_cols].copy()
+    df_display["ROAS Status"] = df_display.apply(
+        lambda r: "✅ Above" if r["sROAS"] > r["beROAS"] else "❌ Below", axis=1
+    )
+    df_display = df_display.rename(columns={
+        "campaignName": "Campaign",
+        "cost": "Cost ($)",
+        "sOrders": "sOrders",
+        "sRevenue": "sRevenue ($)",
+        "sProfit": "sProfit ($)",
+        "sROAS": "sROAS",
+        "beROAS": "beROAS",
+    })
+
+    st.dataframe(
+        df_display.style.format({
+            "Cost ($)": "${:,.2f}",
+            "sRevenue ($)": "${:,.2f}",
+            "sProfit ($)": "${:,.2f}",
+            "sROAS": "{:.3f}",
+            "beROAS": "{:.2f}",
+        }).map(
+            lambda v: "color: #10b981" if v == "✅ Above" else "color: #ef4444" if v == "❌ Below" else "",
+            subset=["ROAS Status"]
+        ),
+        use_container_width=True,
+        height=400,
+    )
