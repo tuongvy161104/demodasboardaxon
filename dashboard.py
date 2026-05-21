@@ -595,7 +595,7 @@ if N_camp > 0 and total_spend > 0:
         hovertemplate="<b>%{x}</b><br>Condition: %{customdata}<br>Count: %{y} campaigns<extra></extra>"
     ))
     
-    layout_spend = get_plotly_layout("Total Campaigns by Spend")
+    layout_spend = get_plotly_layout("")
     fig_spend.update_layout(**layout_spend, height=320, yaxis_title="Campaigns Count")
     st.plotly_chart(fig_spend, use_container_width=True)
 
