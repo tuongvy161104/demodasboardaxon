@@ -471,24 +471,24 @@ if N_camp > 0 and total_spend > 0:
     
     def categorize_spend(pct):
         if pct < thresh_low:
-            return "Chưa đẩy spend"
+            return "Under-spent"
         elif pct < thresh_high:
-            return "Có tín hiệu scale"
+            return "Scale Signal"
         else:
-            return "Đang scale"
+            return "Scaling"
             
     df["spend_category"] = df["pct_spend"].apply(categorize_spend)
     
     category_counts = df["spend_category"].value_counts().reindex(
-        ["Chưa đẩy spend", "Có tín hiệu scale", "Đang scale"], fill_value=0
+        ["Under-spent", "Scale Signal", "Scaling"], fill_value=0
     ).reset_index()
     category_counts.columns = ["Category", "Count"]
     category_counts["Percentage"] = (category_counts["Count"] / N_camp) * 100
     
     category_colors = {
-        "Chưa đẩy spend": "#ef4444",
-        "Có tín hiệu scale": "#f59e0b",
-        "Đang scale": "#10b981"
+        "Under-spent": "#ef4444",
+        "Scale Signal": "#f59e0b",
+        "Scaling": "#10b981"
     }
     
     fig_spend = go.Figure()
@@ -502,15 +502,15 @@ if N_camp > 0 and total_spend > 0:
         ),
         text=category_counts.apply(lambda r: f"{r['Count']} camps ({r['Percentage']:.1f}%)" if r['Count'] > 0 else "", axis=1),
         textposition="outside",
-        hovertemplate="<b>%{x}</b><br>Số lượng: %{y} campaigns<extra></extra>"
+        hovertemplate="<b>%{x}</b><br>Count: %{y} campaigns<extra></extra>"
     ))
     
-    layout_spend = get_plotly_layout("Phân bổ số lượng Campaigns theo mức độ Spend")
-    fig_spend.update_layout(**layout_spend, height=320, yaxis_title="Số lượng Campaigns")
+    layout_spend = get_plotly_layout("Total Campaigns by Spend")
+    fig_spend.update_layout(**layout_spend, height=320, yaxis_title="Campaigns Count")
     st.plotly_chart(fig_spend, use_container_width=True)
 
 else:
-    st.info("⚠️ Không có đủ dữ liệu để tính toán phân bổ Spend.")
+    st.info("⚠️ Not enough data to calculate spend classification.")
 
 # ─────────────────────────────────────────────
 # Time-series chart: sOrders + sROAS
