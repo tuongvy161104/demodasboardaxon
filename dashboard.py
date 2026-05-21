@@ -391,8 +391,10 @@ total_cost = df["cost"].sum()
 total_revenue = df["sRevenue"].sum()
 total_profit = df["sProfit"].sum()
 total_orders = df["sOrders"].sum()
-avg_sroas = df["sROAS"].mean() if df["sROAS"].notna().any() else 0
-avg_beroas = df["beROAS"].mean() if df["beROAS"].notna().any() else 0
+# True Account sROAS = Total Shopify Revenue / Total Cost
+account_sroas = total_revenue / total_cost if total_cost > 0 else 0
+# True Account beROAS (weighted average based on cost spend)
+account_beroas = (df["beROAS"] * df["cost"]).sum() / total_cost if total_cost > 0 else df["beROAS"].mean()
 
 kpis = [
     ("🎯 Total Campaigns", f"{total_campaigns:,}", "campaigns"),
@@ -400,7 +402,7 @@ kpis = [
     ("📈 sRevenue", f"${total_revenue:,.0f}", "shopify revenue"),
     ("💎 sProfit", f"${total_profit:,.0f}", "net profit"),
     ("🛒 sOrders", f"{total_orders:,.0f}", "shopify orders"),
-    ("⚡ sROAS", f"{avg_sroas:.2f}", "avg shopify ROAS"),
+    ("⚡ sROAS", f"{account_sroas:.2f}", "account sROAS"),
 ]
 
 cols = st.columns(6)
@@ -409,7 +411,7 @@ for col, (label, value, sub) in zip(cols, kpis):
         if "Profit" in label:
             color = "#059669" if total_profit > 0 else "#dc2626"
         elif "sROAS" in label:
-            color = "#059669" if avg_sroas >= avg_beroas else "#dc2626"
+            color = "#059669" if account_sroas >= account_beroas else "#dc2626"
         else:
             color = "#1e1b4b"
         st.markdown(f"""
@@ -460,8 +462,10 @@ st.markdown(f'<div class="section-header">📅 sOrders & sROAS by Time Period �
 if len(df_time) > 0 and df_time["campaign_date"].notna().any():
     ts = df_time.groupby("campaign_date").agg(
         sOrders=("sOrders", "sum"),
-        sROAS=("sROAS", "mean"),
+        sRevenue=("sRevenue", "sum"),
+        cost=("cost", "sum"),
     ).reset_index().sort_values("campaign_date")
+    ts["sROAS"] = ts["sRevenue"] / ts["cost"]
 
     fig_ts = make_subplots(specs=[[{"secondary_y": True}]])
 
@@ -502,8 +506,10 @@ else:
     # Show aggregate bar chart when there's only one date or no date range
     agg = df.groupby("campaign_date").agg(
         sOrders=("sOrders", "sum"),
-        sROAS=("sROAS", "mean"),
+        sRevenue=("sRevenue", "sum"),
+        cost=("cost", "sum"),
     ).reset_index().sort_values("campaign_date")
+    agg["sROAS"] = agg["sRevenue"] / agg["cost"]
 
     if len(agg) > 0:
         fig_ts = make_subplots(specs=[[{"secondary_y": True}]])
@@ -527,9 +533,9 @@ else:
         <div style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3);
                     border-radius:12px; padding:32px; text-align:center; color:#94a3b8;">
             📊 Only one date in dataset — showing account totals below.<br>
-            <b style="color:#e2e8f0;">sOrders: {:.0f} &nbsp;|&nbsp; avg sROAS: {:.2f}</b>
+            <b style="color:#1e1b4b;">sOrders: {:.0f} &nbsp;|&nbsp; account sROAS: {:.2f}</b>
         </div>
-        """.format(df["sOrders"].sum(), df["sROAS"].mean()), unsafe_allow_html=True)
+        """.format(df["sOrders"].sum(), account_sroas), unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # Top campaigns – Row
