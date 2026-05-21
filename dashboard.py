@@ -267,7 +267,7 @@ with st.sidebar:
     )
 
     # Default file path
-    DEFAULT_PATH = "/Users/tuongvy/Documents/Gems United/dashboard axon/axon-ads-2026-05-20_to_2026-05-20.csv"
+    DEFAULT_PATH = "axon-ads-2026-05-20_to_2026-05-20.csv"
 
     st.markdown("---")
     st.markdown("### ⏱ Time Period")
