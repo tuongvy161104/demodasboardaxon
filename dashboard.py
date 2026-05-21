@@ -495,13 +495,6 @@ df_filtered_all = df.copy()
 if st.session_state.spend_filter:
     df_filtered_all = df_filtered_all[df_filtered_all["spend_category"] == st.session_state.spend_filter]
 
-# df_filtered_raw: additionally filtered by campaign name → feeds Raw Data table
-df_filtered_raw = df_filtered_all.copy()
-if st.session_state.campaign_filter:
-    _camp_mask = df_filtered_raw["campaignShort"] == st.session_state.campaign_filter
-    if _camp_mask.any():
-        df_filtered_raw = df_filtered_raw[_camp_mask]
-
 # ─────────────────────────────────────────────
 # Active Filter Banner
 # ─────────────────────────────────────────────
@@ -514,7 +507,6 @@ if _any_filter:
         _filter_parts.append(f"🎯 Campaign: <b>{st.session_state.campaign_filter}</b>")
     _filter_html = " &nbsp;·&nbsp; ".join(_filter_parts)
     _n_charts = len(df_filtered_all)
-    _n_raw = len(df_filtered_raw)
     _n_total = len(df)
     _col_banner, _col_clear = st.columns([9, 1])
     with _col_banner:
@@ -526,7 +518,7 @@ if _any_filter:
             <span style="color:#4338ca; font-weight:600; font-size:13px;">
                 Active Filter — {_filter_html} &nbsp;
                 <span style="color:#6b7280; font-weight:400;">
-                    ({_n_charts} campaigns in charts &nbsp;·&nbsp; {_n_raw} in Raw Data)
+                    ({_n_charts} campaigns selected)
                 </span>
             </span>
         </div>
@@ -670,7 +662,7 @@ if N_camp > 0 and total_spend_all > 0:
     layout_spend = get_plotly_layout("")
     fig_spend.update_layout(**layout_spend, height=320, yaxis_title="Campaigns Count")
 
-    st.caption("💡 Click a bar to filter Top / Bottom / Raw Data · click again or press ✕ Clear to reset")
+    st.caption("💡 Click a bar to filter Top and Bottom charts · click again or press ✕ Clear to reset")
     _ev_spend = st.plotly_chart(
         fig_spend,
         use_container_width=True,
@@ -727,7 +719,7 @@ with col_tl:
     ))
     layout = get_plotly_layout(f"Top {top_n} by sOrders")
     fig_top_orders.update_layout(**layout, height=max(300, top_n * 42), xaxis_title="sOrders")
-    st.caption("💡 Click a campaign bar to isolate it in Raw Data")
+    st.caption("💡 Click a campaign bar to filter")
     _ev_top_ord = st.plotly_chart(
         fig_top_orders, use_container_width=True,
         on_select="rerun", selection_mode="points",
@@ -771,7 +763,7 @@ with col_tr:
     ))
     layout = get_plotly_layout(f"Top {top_n} by sProfit")
     fig_top_profit.update_layout(**layout, height=max(300, top_n * 42), xaxis_title="sProfit ($)")
-    st.caption("💡 Click a campaign bar to isolate it in Raw Data")
+    st.caption("💡 Click a campaign bar to filter")
     _ev_top_pft = st.plotly_chart(
         fig_top_profit, use_container_width=True,
         on_select="rerun", selection_mode="points",
@@ -822,7 +814,7 @@ with col_bl:
     ))
     layout = get_plotly_layout(f"Bottom {top_n} by sOrders")
     fig_bot_orders.update_layout(**layout, height=max(300, top_n * 42), xaxis_title="sOrders")
-    st.caption("💡 Click a campaign bar to isolate it in Raw Data")
+    st.caption("💡 Click a campaign bar to filter")
     _ev_bot_ord = st.plotly_chart(
         fig_bot_orders, use_container_width=True,
         on_select="rerun", selection_mode="points",
@@ -866,7 +858,7 @@ with col_br:
     ))
     layout = get_plotly_layout(f"Bottom {top_n} by sProfit")
     fig_bot_profit.update_layout(**layout, height=max(300, top_n * 42), xaxis_title="sProfit ($)")
-    st.caption("💡 Click a campaign bar to isolate it in Raw Data")
+    st.caption("💡 Click a campaign bar to filter")
     _ev_bot_pft = st.plotly_chart(
         fig_bot_profit, use_container_width=True,
         on_select="rerun", selection_mode="points",
@@ -881,47 +873,4 @@ with col_br:
         st.session_state.campaign_filter = _new_camp_bot_pft
         st.rerun()
 
-# ─────────────────────────────────────────────
-# Raw data expander
-# ─────────────────────────────────────────────
-with st.expander("📋 Raw Campaign Data", expanded=False):
-    if len(df_filtered_raw) < len(df):
-        _info_parts = []
-        if st.session_state.spend_filter:
-            _info_parts.append(f"Spend: *{st.session_state.spend_filter}*")
-        if st.session_state.campaign_filter:
-            _info_parts.append(f"Campaign: *{st.session_state.campaign_filter}*")
-        st.info(
-            f"🔍 Showing **{len(df_filtered_raw)}** of **{len(df)}** campaigns"
-            + (f" — {' · '.join(_info_parts)}" if _info_parts else "")
-        )
 
-    display_cols = ["campaignName", "cost", "sOrders", "sRevenue", "sProfit", "sROAS", "beROAS"]
-    df_display = df_filtered_raw[display_cols].copy()
-    df_display["ROAS Status"] = df_display.apply(
-        lambda r: "✅ Above" if r["sROAS"] > r["beROAS"] else "❌ Below", axis=1
-    )
-    df_display = df_display.rename(columns={
-        "campaignName": "Campaign",
-        "cost": "Cost ($)",
-        "sOrders": "sOrders",
-        "sRevenue": "sRevenue ($)",
-        "sProfit": "sProfit ($)",
-        "sROAS": "sROAS",
-        "beROAS": "beROAS",
-    })
-
-    st.dataframe(
-        df_display.style.format({
-            "Cost ($)": "${:,.2f}",
-            "sRevenue ($)": "${:,.2f}",
-            "sProfit ($)": "${:,.2f}",
-            "sROAS": "{:.3f}",
-            "beROAS": "{:.2f}",
-        }).map(
-            lambda v: "color: #10b981" if v == "✅ Above" else "color: #ef4444" if v == "❌ Below" else "",
-            subset=["ROAS Status"]
-        ),
-        use_container_width=True,
-        height=400,
-    )
