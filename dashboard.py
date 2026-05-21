@@ -680,6 +680,31 @@ if N_camp > 0 and total_spend_all > 0:
         st.session_state.campaign_filter = None   # reset campaign filter when spend category changes
         st.rerun()
 
+    # Drilldown table for selected spend category
+    if st.session_state.spend_filter:
+        st.markdown(f'<div style="font-size:14px; font-weight:600; color:#312e81; margin: 16px 0 8px 0;">📋 Campaigns in: <span style="color:#6366f1;">{st.session_state.spend_filter}</span></div>', unsafe_allow_html=True)
+        df_drill = df[df["spend_category"] == st.session_state.spend_filter].copy()
+        df_drill = df_drill[["campaignShort", "cost", "pct_spend", "sROAS", "sOrders", "sProfit"]].copy()
+        df_drill = df_drill.rename(columns={
+            "campaignShort": "Campaign",
+            "cost": "Spend ($)",
+            "pct_spend": "% Spend",
+            "sROAS": "sROAS",
+            "sOrders": "sPurchase",
+            "sProfit": "sMargin ($)"
+        })
+        st.dataframe(
+            df_drill.style.format({
+                "Spend ($)": "${:,.2f}",
+                "% Spend": "{:.2%}",
+                "sROAS": "{:.3f}",
+                "sPurchase": "{:,.0f}",
+                "sMargin ($)": "${:,.2f}"
+            }),
+            use_container_width=True,
+            hide_index=True
+        )
+
 else:
     st.info("⚠️ Not enough data to calculate spend classification.")
 
