@@ -484,6 +484,11 @@ if N_camp > 0 and total_spend > 0:
     ).reset_index()
     category_counts.columns = ["Category", "Count"]
     category_counts["Percentage"] = (category_counts["Count"] / N_camp) * 100
+    category_counts["Condition"] = [
+        f"< {thresh_low*100:.2f}% of total spend",
+        f"{thresh_low*100:.2f}% to {thresh_high*100:.2f}% of total spend",
+        f"≥ {thresh_high*100:.2f}% of total spend"
+    ]
     
     category_colors = {
         "Under-spent": "#ef4444",
@@ -496,13 +501,14 @@ if N_camp > 0 and total_spend > 0:
     fig_spend.add_trace(go.Bar(
         x=category_counts["Category"],
         y=category_counts["Count"],
+        customdata=category_counts["Condition"],
         marker=dict(
             color=[category_colors[cat] for cat in category_counts["Category"]],
             line=dict(color="rgba(255,255,255,0.6)", width=1.5)
         ),
         text=category_counts.apply(lambda r: f"{r['Count']} camps ({r['Percentage']:.1f}%)" if r['Count'] > 0 else "", axis=1),
         textposition="outside",
-        hovertemplate="<b>%{x}</b><br>Count: %{y} campaigns<extra></extra>"
+        hovertemplate="<b>%{x}</b><br>Condition: %{customdata}<br>Count: %{y} campaigns<extra></extra>"
     ))
     
     layout_spend = get_plotly_layout("Total Campaigns by Spend")
