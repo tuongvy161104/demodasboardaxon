@@ -454,69 +454,6 @@ with col2:
     </div>
     """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
-# Total Campaigns by Spend
-# ─────────────────────────────────────────────
-st.markdown('<div class="section-header">📈 Total Campaigns by Spend</div>', unsafe_allow_html=True)
-
-N_camp = len(df)
-total_spend = df["cost"].sum()
-
-if N_camp > 0 and total_spend > 0:
-    equal_share = 1.0 / N_camp
-    df["pct_spend"] = df["cost"] / total_spend
-    
-    thresh_low = 1.5 * equal_share
-    thresh_high = 2.0 * equal_share
-    
-    def categorize_spend(pct):
-        if pct < thresh_low:
-            return "Under-spent"
-        elif pct < thresh_high:
-            return "Scale Signal"
-        else:
-            return "Scaling"
-            
-    df["spend_category"] = df["pct_spend"].apply(categorize_spend)
-    
-    category_counts = df["spend_category"].value_counts().reindex(
-        ["Under-spent", "Scale Signal", "Scaling"], fill_value=0
-    ).reset_index()
-    category_counts.columns = ["Category", "Count"]
-    category_counts["Percentage"] = (category_counts["Count"] / N_camp) * 100
-    category_counts["Condition"] = [
-        f"< {thresh_low*100:.2f}% of total spend",
-        f"{thresh_low*100:.2f}% to {thresh_high*100:.2f}% of total spend",
-        f"≥ {thresh_high*100:.2f}% of total spend"
-    ]
-    
-    category_colors = {
-        "Under-spent": "#ef4444",
-        "Scale Signal": "#f59e0b",
-        "Scaling": "#10b981"
-    }
-    
-    fig_spend = go.Figure()
-    
-    fig_spend.add_trace(go.Bar(
-        x=category_counts["Category"],
-        y=category_counts["Count"],
-        customdata=category_counts["Condition"],
-        marker=dict(
-            color=[category_colors[cat] for cat in category_counts["Category"]],
-            line=dict(color="rgba(255,255,255,0.6)", width=1.5)
-        ),
-        text=category_counts.apply(lambda r: f"{r['Count']} camps ({r['Percentage']:.1f}%)" if r['Count'] > 0 else "", axis=1),
-        textposition="outside",
-        hovertemplate="<b>%{x}</b><br>Condition: %{customdata}<br>Count: %{y} campaigns<extra></extra>"
-    ))
-    
-    layout_spend = get_plotly_layout("Total Campaigns by Spend")
-    fig_spend.update_layout(**layout_spend, height=320, yaxis_title="Campaigns Count")
-    st.plotly_chart(fig_spend, use_container_width=True)
-
-else:
-    st.info("⚠️ Not enough data to calculate spend classification.")
 
 # ─────────────────────────────────────────────
 # Time-series chart: sOrders + sROAS
@@ -600,6 +537,70 @@ else:
             <b style="color:#1e1b4b;">sOrders: {:.0f} &nbsp;|&nbsp; account sROAS: {:.2f}</b>
         </div>
         """.format(df["sOrders"].sum(), account_sroas), unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
+# Total Campaigns by Spend
+# ─────────────────────────────────────────────
+st.markdown('<div class="section-header">📈 Total Campaigns by Spend</div>', unsafe_allow_html=True)
+
+N_camp = len(df)
+total_spend = df["cost"].sum()
+
+if N_camp > 0 and total_spend > 0:
+    equal_share = 1.0 / N_camp
+    df["pct_spend"] = df["cost"] / total_spend
+    
+    thresh_low = 1.5 * equal_share
+    thresh_high = 2.0 * equal_share
+    
+    def categorize_spend(pct):
+        if pct < thresh_low:
+            return "Under-spent"
+        elif pct < thresh_high:
+            return "Scale Signal"
+        else:
+            return "Scaling"
+            
+    df["spend_category"] = df["pct_spend"].apply(categorize_spend)
+    
+    category_counts = df["spend_category"].value_counts().reindex(
+        ["Under-spent", "Scale Signal", "Scaling"], fill_value=0
+    ).reset_index()
+    category_counts.columns = ["Category", "Count"]
+    category_counts["Percentage"] = (category_counts["Count"] / N_camp) * 100
+    category_counts["Condition"] = [
+        f"< {thresh_low*100:.2f}% of total spend",
+        f"{thresh_low*100:.2f}% to {thresh_high*100:.2f}% of total spend",
+        f"≥ {thresh_high*100:.2f}% of total spend"
+    ]
+    
+    category_colors = {
+        "Under-spent": "#ef4444",
+        "Scale Signal": "#f59e0b",
+        "Scaling": "#10b981"
+    }
+    
+    fig_spend = go.Figure()
+    
+    fig_spend.add_trace(go.Bar(
+        x=category_counts["Category"],
+        y=category_counts["Count"],
+        customdata=category_counts["Condition"],
+        marker=dict(
+            color=[category_colors[cat] for cat in category_counts["Category"]],
+            line=dict(color="rgba(255,255,255,0.6)", width=1.5)
+        ),
+        text=category_counts.apply(lambda r: f"{r['Count']} camps ({r['Percentage']:.1f}%)" if r['Count'] > 0 else "", axis=1),
+        textposition="outside",
+        hovertemplate="<b>%{x}</b><br>Condition: %{customdata}<br>Count: %{y} campaigns<extra></extra>"
+    ))
+    
+    layout_spend = get_plotly_layout("Total Campaigns by Spend")
+    fig_spend.update_layout(**layout_spend, height=320, yaxis_title="Campaigns Count")
+    st.plotly_chart(fig_spend, use_container_width=True)
+
+else:
+    st.info("⚠️ Not enough data to calculate spend classification.")
 
 # ─────────────────────────────────────────────
 # Top campaigns – Row
