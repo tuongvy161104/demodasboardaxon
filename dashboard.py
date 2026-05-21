@@ -9,8 +9,8 @@ import os
 # ─────────────────────────────────────────────
 # Session State
 # ─────────────────────────────────────────────
-if "spend_filter" not in st.session_state:
-    st.session_state.spend_filter = None   # str | None: "Under-spent" / "Scale Signal" / "Scaling"
+# Removed unused session state variables
+
 
 # ─────────────────────────────────────────────
 # Page config
@@ -592,12 +592,7 @@ if N_camp > 0 and total_spend_all > 0:
         "Scaling": "#10b981",
     }
 
-    # Visual dimming: dim non-selected bars when a spend filter is active
-    _bar_colors = [
-        "rgba(190,190,200,0.30)" if (st.session_state.spend_filter and cat != st.session_state.spend_filter)
-        else _cat_color_map[cat]
-        for cat in category_counts["Category"]
-    ]
+    _bar_colors = [_cat_color_map[cat] for cat in category_counts["Category"]]
 
     fig_spend = go.Figure()
     fig_spend.add_trace(go.Bar(
@@ -627,18 +622,15 @@ if N_camp > 0 and total_spend_all > 0:
         key="spend_chart",
     )
 
-    # Update state based on click
-    _new_spend = None
+    # Get selected category directly from the event
+    selected_category = None
     if _ev_spend.selection.points:
-        _new_spend = _ev_spend.selection.points[0].get("x")
-    if _new_spend != st.session_state.spend_filter:
-        st.session_state.spend_filter = _new_spend
-        st.rerun()
+        selected_category = _ev_spend.selection.points[0].get("x")
 
     # Drilldown table for selected spend category
-    if st.session_state.spend_filter:
-        st.markdown(f'<div style="font-size:14px; font-weight:600; color:#312e81; margin: 16px 0 8px 0;">📋 Campaigns in: <span style="color:#6366f1;">{st.session_state.spend_filter}</span></div>', unsafe_allow_html=True)
-        df_drill = df[df["spend_category"] == st.session_state.spend_filter].copy()
+    if selected_category:
+        st.markdown(f'<div style="font-size:14px; font-weight:600; color:#312e81; margin: 16px 0 8px 0;">📋 Campaigns in: <span style="color:#6366f1;">{selected_category}</span></div>', unsafe_allow_html=True)
+        df_drill = df[df["spend_category"] == selected_category].copy()
         df_drill = df_drill[["campaignShort", "cost", "pct_spend", "sROAS", "sOrders", "sProfit"]].copy()
         df_drill = df_drill.rename(columns={
             "campaignShort": "Campaign",
@@ -809,39 +801,3 @@ with col_br:
         fig_bot_profit, use_container_width=True,
     )
     st.caption("🟢 sROAS > beROAS &nbsp;&nbsp; 🔴 sROAS ≤ beROAS")
-
-# ─────────────────────────────────────────────
-# Raw data expander
-# ─────────────────────────────────────────────
-with st.expander("📋 Full Campaign List", expanded=False):
-    st.info(f"🔍 Showing all **{len(df)}** campaigns")
-
-    display_cols = ["campaignName", "cost", "sOrders", "sRevenue", "sProfit", "sROAS", "beROAS"]
-    df_display = df[display_cols].copy()
-    df_display["ROAS Status"] = df_display.apply(
-        lambda r: "✅ Above" if r["sROAS"] > r["beROAS"] else "❌ Below", axis=1
-    )
-    df_display = df_display.rename(columns={
-        "campaignName": "Campaign",
-        "cost": "Cost ($)",
-        "sOrders": "sOrders",
-        "sRevenue": "sRevenue ($)",
-        "sProfit": "sProfit ($)",
-        "sROAS": "sROAS",
-        "beROAS": "beROAS",
-    })
-
-    st.dataframe(
-        df_display.style.format({
-            "Cost ($)": "${:,.2f}",
-            "sRevenue ($)": "${:,.2f}",
-            "sProfit ($)": "${:,.2f}",
-            "sROAS": "{:.3f}",
-            "beROAS": "{:.2f}",
-        }).map(
-            lambda v: "color: #10b981" if v == "✅ Above" else "color: #ef4444" if v == "❌ Below" else "",
-            subset=["ROAS Status"]
-        ),
-        use_container_width=True,
-        height=400,
-    )
