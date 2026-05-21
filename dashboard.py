@@ -7,12 +7,10 @@ from datetime import datetime, timedelta
 import os
 
 # ─────────────────────────────────────────────
-# Session State – Cross-filter
+# Session State
 # ─────────────────────────────────────────────
 if "spend_filter" not in st.session_state:
     st.session_state.spend_filter = None   # str | None: "Under-spent" / "Scale Signal" / "Scaling"
-if "campaign_filter" not in st.session_state:
-    st.session_state.campaign_filter = None  # str | None: campaignShort name
 
 # ─────────────────────────────────────────────
 # Page config
@@ -463,7 +461,7 @@ with col2:
     """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# Spend Category pre-computation (shared for cross-filter)
+# Spend Category pre-computation
 # ─────────────────────────────────────────────
 N_camp = len(df)
 total_spend_all = df["cost"].sum()
@@ -487,48 +485,6 @@ else:
     thresh_low = thresh_high = 0.0
     df["spend_category"] = "Under-spent"
 
-# ─────────────────────────────────────────────
-# Cross-filter: derived dataframes
-# ─────────────────────────────────────────────
-# df_filtered_all: filtered by spend category → feeds Top/Bottom campaign charts
-df_filtered_all = df.copy()
-if st.session_state.spend_filter:
-    df_filtered_all = df_filtered_all[df_filtered_all["spend_category"] == st.session_state.spend_filter]
-
-# ─────────────────────────────────────────────
-# Active Filter Banner
-# ─────────────────────────────────────────────
-_any_filter = st.session_state.spend_filter or st.session_state.campaign_filter
-if _any_filter:
-    _filter_parts = []
-    if st.session_state.spend_filter:
-        _filter_parts.append(f"📊 Spend: <b>{st.session_state.spend_filter}</b>")
-    if st.session_state.campaign_filter:
-        _filter_parts.append(f"🎯 Campaign: <b>{st.session_state.campaign_filter}</b>")
-    _filter_html = " &nbsp;·&nbsp; ".join(_filter_parts)
-    _n_charts = len(df_filtered_all)
-    _n_total = len(df)
-    _col_banner, _col_clear = st.columns([9, 1])
-    with _col_banner:
-        st.markdown(f"""
-        <div style="background:linear-gradient(90deg,rgba(99,102,241,0.10),rgba(139,92,246,0.07));
-                    border:1.5px solid rgba(99,102,241,0.30); border-radius:12px;
-                    padding:10px 18px; display:flex; align-items:center; gap:12px; margin-bottom:4px;">
-            <span style="font-size:18px;">🔍</span>
-            <span style="color:#4338ca; font-weight:600; font-size:13px;">
-                Active Filter — {_filter_html} &nbsp;
-                <span style="color:#6b7280; font-weight:400;">
-                    ({_n_charts} campaigns selected)
-                </span>
-            </span>
-        </div>
-        """, unsafe_allow_html=True)
-    with _col_clear:
-        if st.button("✕ Clear", key="clear_filter", use_container_width=True,
-                     help="Remove all active filters"):
-            st.session_state.spend_filter = None
-            st.session_state.campaign_filter = None
-            st.rerun()
 
 # ─────────────────────────────────────────────
 # Time-series chart: sOrders + sROAS
@@ -614,7 +570,7 @@ else:
         """.format(df["sOrders"].sum(), account_sroas), unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# Total Campaigns by Spend  ← cross-filter source
+# Total Campaigns by Spend
 # ─────────────────────────────────────────────
 st.markdown('<div class="section-header">📈 Total Campaigns by Spend</div>', unsafe_allow_html=True)
 
@@ -662,7 +618,7 @@ if N_camp > 0 and total_spend_all > 0:
     layout_spend = get_plotly_layout("")
     fig_spend.update_layout(**layout_spend, height=320, yaxis_title="Campaigns Count")
 
-    st.caption("💡 Click a bar to filter Top and Bottom charts · click again or press ✕ Clear to reset")
+    st.caption("💡 Click a bar to view campaigns list · click again to close")
     _ev_spend = st.plotly_chart(
         fig_spend,
         use_container_width=True,
@@ -671,13 +627,12 @@ if N_camp > 0 and total_spend_all > 0:
         key="spend_chart",
     )
 
-    # Update cross-filter state based on click
+    # Update state based on click
     _new_spend = None
     if _ev_spend.selection.points:
         _new_spend = _ev_spend.selection.points[0].get("x")
     if _new_spend != st.session_state.spend_filter:
         st.session_state.spend_filter = _new_spend
-        st.session_state.campaign_filter = None   # reset campaign filter when spend category changes
         st.rerun()
 
     # Drilldown table for selected spend category
@@ -718,14 +673,13 @@ col_tl, col_tr = st.columns(2)
 # Top by sOrders
 with col_tl:
     df_top_orders = (
-        df_filtered_all.nlargest(top_n, "sOrders")[["campaignShort", "sOrders", "sROAS", "beROAS"]].copy()
+        df.nlargest(top_n, "sOrders")[["campaignShort", "sOrders", "sROAS", "beROAS"]].copy()
     )
     df_top_orders = df_top_orders.sort_values("sOrders", ascending=True)
 
     colors_orders = [
-        "rgba(190,190,200,0.30)" if (st.session_state.campaign_filter and camp != st.session_state.campaign_filter)
-        else (CHART_COLORS["green"] if r > b else CHART_COLORS["red"])
-        for r, b, camp in zip(df_top_orders["sROAS"], df_top_orders["beROAS"], df_top_orders["campaignShort"])
+        CHART_COLORS["green"] if r > b else CHART_COLORS["red"]
+        for r, b in zip(df_top_orders["sROAS"], df_top_orders["beROAS"])
     ]
 
     fig_top_orders = go.Figure(go.Bar(
@@ -744,32 +698,21 @@ with col_tl:
     ))
     layout = get_plotly_layout(f"Top {top_n} by sOrders")
     fig_top_orders.update_layout(**layout, height=max(300, top_n * 42), xaxis_title="sOrders")
-    st.caption("💡 Click a campaign bar to filter")
-    _ev_top_ord = st.plotly_chart(
+    st.plotly_chart(
         fig_top_orders, use_container_width=True,
-        on_select="rerun", selection_mode="points",
-        key="top_orders_chart",
     )
     st.caption("🟢 sROAS > beROAS &nbsp;&nbsp; 🔴 sROAS ≤ beROAS")
-
-    _new_camp_top_ord = None
-    if _ev_top_ord.selection.points:
-        _new_camp_top_ord = _ev_top_ord.selection.points[0].get("y")
-    if _new_camp_top_ord != st.session_state.campaign_filter:
-        st.session_state.campaign_filter = _new_camp_top_ord
-        st.rerun()
 
 # Top by profit
 with col_tr:
     df_top_profit = (
-        df_filtered_all.nlargest(top_n, "sProfit")[["campaignShort", "sProfit", "sROAS", "beROAS"]].copy()
+        df.nlargest(top_n, "sProfit")[["campaignShort", "sProfit", "sROAS", "beROAS"]].copy()
     )
     df_top_profit = df_top_profit.sort_values("sProfit", ascending=True)
 
     colors_profit = [
-        "rgba(190,190,200,0.30)" if (st.session_state.campaign_filter and camp != st.session_state.campaign_filter)
-        else (CHART_COLORS["green"] if r > b else CHART_COLORS["red"])
-        for r, b, camp in zip(df_top_profit["sROAS"], df_top_profit["beROAS"], df_top_profit["campaignShort"])
+        CHART_COLORS["green"] if r > b else CHART_COLORS["red"]
+        for r, b in zip(df_top_profit["sROAS"], df_top_profit["beROAS"])
     ]
 
     fig_top_profit = go.Figure(go.Bar(
@@ -788,20 +731,11 @@ with col_tr:
     ))
     layout = get_plotly_layout(f"Top {top_n} by sProfit")
     fig_top_profit.update_layout(**layout, height=max(300, top_n * 42), xaxis_title="sProfit ($)")
-    st.caption("💡 Click a campaign bar to filter")
-    _ev_top_pft = st.plotly_chart(
+    st.plotly_chart(
         fig_top_profit, use_container_width=True,
-        on_select="rerun", selection_mode="points",
-        key="top_profit_chart",
     )
     st.caption("🟢 sROAS > beROAS &nbsp;&nbsp; 🔴 sROAS ≤ beROAS")
 
-    _new_camp_top_pft = None
-    if _ev_top_pft.selection.points:
-        _new_camp_top_pft = _ev_top_pft.selection.points[0].get("y")
-    if _new_camp_top_pft != st.session_state.campaign_filter:
-        st.session_state.campaign_filter = _new_camp_top_pft
-        st.rerun()
 
 # ─────────────────────────────────────────────
 # Bottom campaigns – Row
@@ -813,14 +747,13 @@ col_bl, col_br = st.columns(2)
 # Bottom by sOrders
 with col_bl:
     df_bot_orders = (
-        df_filtered_all.nsmallest(top_n, "sOrders")[["campaignShort", "sOrders", "sROAS", "beROAS"]].copy()
+        df.nsmallest(top_n, "sOrders")[["campaignShort", "sOrders", "sROAS", "beROAS"]].copy()
     )
     df_bot_orders = df_bot_orders.sort_values("sOrders", ascending=False)
 
     colors_bot_orders = [
-        "rgba(190,190,200,0.30)" if (st.session_state.campaign_filter and camp != st.session_state.campaign_filter)
-        else (CHART_COLORS["green"] if r > b else CHART_COLORS["red"])
-        for r, b, camp in zip(df_bot_orders["sROAS"], df_bot_orders["beROAS"], df_bot_orders["campaignShort"])
+        CHART_COLORS["green"] if r > b else CHART_COLORS["red"]
+        for r, b in zip(df_bot_orders["sROAS"], df_bot_orders["beROAS"])
     ]
 
     fig_bot_orders = go.Figure(go.Bar(
@@ -839,32 +772,21 @@ with col_bl:
     ))
     layout = get_plotly_layout(f"Bottom {top_n} by sOrders")
     fig_bot_orders.update_layout(**layout, height=max(300, top_n * 42), xaxis_title="sOrders")
-    st.caption("💡 Click a campaign bar to filter")
-    _ev_bot_ord = st.plotly_chart(
+    st.plotly_chart(
         fig_bot_orders, use_container_width=True,
-        on_select="rerun", selection_mode="points",
-        key="bot_orders_chart",
     )
     st.caption("🟢 sROAS > beROAS &nbsp;&nbsp; 🔴 sROAS ≤ beROAS")
-
-    _new_camp_bot_ord = None
-    if _ev_bot_ord.selection.points:
-        _new_camp_bot_ord = _ev_bot_ord.selection.points[0].get("y")
-    if _new_camp_bot_ord != st.session_state.campaign_filter:
-        st.session_state.campaign_filter = _new_camp_bot_ord
-        st.rerun()
 
 # Bottom by profit
 with col_br:
     df_bot_profit = (
-        df_filtered_all.nsmallest(top_n, "sProfit")[["campaignShort", "sProfit", "sROAS", "beROAS"]].copy()
+        df.nsmallest(top_n, "sProfit")[["campaignShort", "sProfit", "sROAS", "beROAS"]].copy()
     )
     df_bot_profit = df_bot_profit.sort_values("sProfit", ascending=False)
 
     colors_bot_profit = [
-        "rgba(190,190,200,0.30)" if (st.session_state.campaign_filter and camp != st.session_state.campaign_filter)
-        else (CHART_COLORS["green"] if r > b else CHART_COLORS["red"])
-        for r, b, camp in zip(df_bot_profit["sROAS"], df_bot_profit["beROAS"], df_bot_profit["campaignShort"])
+        CHART_COLORS["green"] if r > b else CHART_COLORS["red"]
+        for r, b in zip(df_bot_profit["sROAS"], df_bot_profit["beROAS"])
     ]
 
     fig_bot_profit = go.Figure(go.Bar(
@@ -883,19 +805,7 @@ with col_br:
     ))
     layout = get_plotly_layout(f"Bottom {top_n} by sProfit")
     fig_bot_profit.update_layout(**layout, height=max(300, top_n * 42), xaxis_title="sProfit ($)")
-    st.caption("💡 Click a campaign bar to filter")
-    _ev_bot_pft = st.plotly_chart(
+    st.plotly_chart(
         fig_bot_profit, use_container_width=True,
-        on_select="rerun", selection_mode="points",
-        key="bot_profit_chart",
     )
     st.caption("🟢 sROAS > beROAS &nbsp;&nbsp; 🔴 sROAS ≤ beROAS")
-
-    _new_camp_bot_pft = None
-    if _ev_bot_pft.selection.points:
-        _new_camp_bot_pft = _ev_bot_pft.selection.points[0].get("y")
-    if _new_camp_bot_pft != st.session_state.campaign_filter:
-        st.session_state.campaign_filter = _new_camp_bot_pft
-        st.rerun()
-
-
