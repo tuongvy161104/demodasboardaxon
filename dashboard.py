@@ -631,14 +631,17 @@ if N_camp > 0 and total_spend_all > 0:
     if selected_category:
         st.markdown(f'<div style="font-size:14px; font-weight:600; color:#312e81; margin: 16px 0 8px 0;">📋 Campaigns in: <span style="color:#6366f1;">{selected_category}</span></div>', unsafe_allow_html=True)
         df_drill = df[df["spend_category"] == selected_category].copy()
-        df_drill = df_drill[["campaignShort", "cost", "pct_spend", "sROAS", "sOrders", "sProfit"]].copy()
+        df_drill["margin_pct"] = df_drill.apply(
+            lambda r: (r["sProfit"] / r["sRevenue"] * 100) if r["sRevenue"] != 0 else 0, axis=1
+        )
+        df_drill = df_drill[["campaignShort", "cost", "pct_spend", "sROAS", "sOrders", "margin_pct"]].copy()
         df_drill = df_drill.rename(columns={
             "campaignShort": "Campaign",
             "cost": "Spend ($)",
             "pct_spend": "% Spend",
             "sROAS": "sROAS",
             "sOrders": "sPurchase",
-            "sProfit": "sMargin ($)"
+            "margin_pct": "sMargin (%)"
         })
         st.dataframe(
             df_drill.style.format({
@@ -646,7 +649,7 @@ if N_camp > 0 and total_spend_all > 0:
                 "% Spend": "{:.2%}",
                 "sROAS": "{:.3f}",
                 "sPurchase": "{:,.0f}",
-                "sMargin ($)": "${:,.2f}"
+                "sMargin (%)": "{:.1f}%"
             }),
             use_container_width=True,
             hide_index=True
