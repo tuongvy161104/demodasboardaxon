@@ -172,8 +172,8 @@ section[data-testid="stSidebar"] {
 /* Hide streamlit default elements */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-header {visibility: hidden;}
-[data-testid="collapsedControl"] {visibility: visible;}
+[data-testid="stToolbar"] {visibility: hidden !important;}
+header {background: transparent !important;}
 
 /* Plotly chart wrapper */
 .js-plotly-plot {
