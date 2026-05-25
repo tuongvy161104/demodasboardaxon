@@ -173,6 +173,7 @@ section[data-testid="stSidebar"] {
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 header {visibility: hidden;}
+[data-testid="collapsedControl"] {visibility: visible;}
 
 /* Plotly chart wrapper */
 .js-plotly-plot {
