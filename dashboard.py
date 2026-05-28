@@ -803,3 +803,54 @@ with col_br:
         fig_bot_profit, use_container_width=True,
     )
     st.caption("🟢 sROAS > beROAS &nbsp;&nbsp; 🔴 sROAS ≤ beROAS")
+
+# ─────────────────────────────────────────────
+# Campaigns with Room to Scale
+# ─────────────────────────────────────────────
+st.markdown('<div class="section-header">🚀 Campaigns with Room to Scale</div>', unsafe_allow_html=True)
+
+df_scale = df.copy()
+df_scale["margin_pct"] = df_scale.apply(
+    lambda r: (r["sProfit"] / r["sRevenue"] * 100) if r["sRevenue"] != 0 else 0, axis=1
+)
+
+# Filtering conditions: Spend (cost) > 190 and Margin % > 10%
+df_scale_filtered = df_scale[(df_scale["cost"] > 190) & (df_scale["margin_pct"] > 10)].copy()
+
+if len(df_scale_filtered) > 0:
+    # Sort by profit descending, then spend descending
+    df_scale_filtered = df_scale_filtered.sort_values(by=["sProfit", "cost"], ascending=False)
+    
+    # Columns to show: Campaign Name, Spend, Revenue, Profit, sOrders, Margin %, sROAS, beROAS
+    df_scale_display = df_scale_filtered[[
+        "campaignShort", "cost", "sRevenue", "sProfit", "sOrders", "margin_pct", "sROAS", "beROAS"
+    ]].copy()
+    
+    df_scale_display = df_scale_display.rename(columns={
+        "campaignShort": "Campaign",
+        "cost": "Spend ($)",
+        "sRevenue": "Revenue ($)",
+        "sProfit": "Profit ($)",
+        "sOrders": "Purchase (sOrders)",
+        "margin_pct": "Margin (%)",
+        "sROAS": "sROAS",
+        "beROAS": "beROAS"
+    })
+    
+    st.dataframe(
+        df_scale_display.style.format({
+            "Spend ($)": "${:,.2f}",
+            "Revenue ($)": "${:,.2f}",
+            "Profit ($)": "${:,.2f}",
+            "Purchase (sOrders)": "{:,.0f}",
+            "Margin (%)": "{:.1f}%",
+            "sROAS": "{:.3f}",
+            "beROAS": "{:.3f}"
+        }),
+        use_container_width=True,
+        hide_index=True
+    )
+    st.caption("💡 Showing campaigns with Spend > $190 and % Margin > 10%, sorted by Profit descending.")
+else:
+    st.info("ℹ️ No campaigns currently meet the scaling criteria (Spend > $190 and % Margin > 10%).")
+
