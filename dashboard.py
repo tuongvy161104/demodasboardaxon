@@ -891,7 +891,7 @@ for _, row in df_scaling_rep.iterrows():
     rev = row["sRevenue"]
     prof = row["sProfit"]
     margin = (prof / rev * 100) if rev != 0 else 0
-    scaling_lines.append(f"{name}\nSpend: ${spend:,.0f}, Margin: {margin:.1f}%")
+    scaling_lines.append(f"**{name}**\nSpend: ${spend:,.0f}, Margin: {margin:.1f}%")
 
 scaling_text = "\n".join(scaling_lines)
 num_scaling = len(df_scaling_rep)
@@ -910,7 +910,7 @@ for _, row in df_room_rep.iterrows():
     name = row["campaignShort"]
     spend = row["cost"]
     margin = row["margin_pct"]
-    room_lines.append(f"{name}\nSpend ${spend:,.0f}, Margin {margin:.1f}%")
+    room_lines.append(f"**{name}**\nSpend ${spend:,.0f}, Margin {margin:.1f}%")
 
 room_text = "\n".join(room_lines)
 
