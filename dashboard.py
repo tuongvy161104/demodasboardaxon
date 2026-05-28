@@ -814,8 +814,12 @@ df_scale["margin_pct"] = df_scale.apply(
     lambda r: (r["sProfit"] / r["sRevenue"] * 100) if r["sRevenue"] != 0 else 0, axis=1
 )
 
-# Filtering conditions: Spend (cost) > 190 and Margin % > 10%
-df_scale_filtered = df_scale[(df_scale["cost"] > 190) & (df_scale["margin_pct"] > 10)].copy()
+# Filtering conditions: Spend (cost) > 190, Margin % > 10%, and Spend Category is 'Under-spent'
+df_scale_filtered = df_scale[
+    (df_scale["cost"] > 190) & 
+    (df_scale["margin_pct"] > 10) & 
+    (df_scale["spend_category"] == "Under-spent")
+].copy()
 
 if len(df_scale_filtered) > 0:
     # Sort by profit descending, then spend descending
@@ -850,7 +854,7 @@ if len(df_scale_filtered) > 0:
         use_container_width=True,
         hide_index=True
     )
-    st.caption("💡 Showing campaigns with Spend > $190 and % Margin > 10%, sorted by Profit descending.")
+    st.caption("💡 Showing campaigns in 'Under-spent' category with Spend > $190 and % Margin > 10%, sorted by Profit descending.")
 else:
-    st.info("ℹ️ No campaigns currently meet the scaling criteria (Spend > $190 and % Margin > 10%).")
+    st.info("ℹ️ No campaigns currently meet the scaling criteria (Under-spent category, Spend > $190 and % Margin > 10%).")
 
