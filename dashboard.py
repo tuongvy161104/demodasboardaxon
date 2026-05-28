@@ -858,3 +858,88 @@ if len(df_scale_filtered) > 0:
 else:
     st.info("ℹ️ No campaigns currently meet the scaling criteria (Under-spent category, Spend > $190 and % Margin > 10%).")
 
+# ─────────────────────────────────────────────
+# Daily Performance Report Generator
+# ─────────────────────────────────────────────
+st.markdown('<div class="section-header">📋 Generated Daily Telegram/Slack Report</div>', unsafe_allow_html=True)
+
+# 1. Date calculation
+latest_date = df["campaign_date"].dropna().max() if "campaign_date" in df and df["campaign_date"].notna().any() else None
+latest_date_str = latest_date.strftime("%d.%m.%Y") if latest_date else datetime.today().strftime("%d.%m.%Y")
+
+# 2. Key stats
+total_camps_active = len(df)
+total_cost_report = df["cost"].sum()
+total_orders_report = df["sOrders"].sum()
+total_revenue_report = df["sRevenue"].sum()
+account_sroas_report = total_revenue_report / total_cost_report if total_cost_report > 0 else 0
+
+# 3. Overview (ROAS vs Breakeven ROAS)
+df_valid_rep = df.dropna(subset=["sROAS", "beROAS"])
+above_roas_rep = int((df_valid_rep["sROAS"] > df_valid_rep["beROAS"]).sum())
+below_roas_rep = int((df_valid_rep["sROAS"] <= df_valid_rep["beROAS"]).sum())
+
+# 4. Campaigns currently scaling (spend_category is NOT Under-spent)
+# Sorted by Spend (cost) descending
+df_scaling_rep = df[df["spend_category"] != "Under-spent"].copy()
+df_scaling_rep = df_scaling_rep.sort_values(by="cost", ascending=False)
+
+scaling_lines = []
+for _, row in df_scaling_rep.iterrows():
+    name = row["campaignShort"]
+    spend = row["cost"]
+    rev = row["sRevenue"]
+    prof = row["sProfit"]
+    margin = (prof / rev * 100) if rev != 0 else 0
+    scaling_lines.append(f"{name}\nSpend: ${spend:,.0f}, Margin: {margin:.1f}%")
+
+scaling_text = "\n".join(scaling_lines)
+num_scaling = len(df_scaling_rep)
+
+# 5. Campaigns with room to scale (spend_category == Under-spent, Spend > 190, Margin > 10%)
+# Sorted by sProfit descending
+df_room_rep = df_scale[
+    (df_scale["cost"] > 190) & 
+    (df_scale["margin_pct"] > 10) & 
+    (df_scale["spend_category"] == "Under-spent")
+].copy()
+df_room_rep = df_room_rep.sort_values(by="sProfit", ascending=False)
+
+room_lines = []
+for _, row in df_room_rep.iterrows():
+    name = row["campaignShort"]
+    spend = row["cost"]
+    margin = row["margin_pct"]
+    room_lines.append(f"{name}\nSpend ${spend:,.0f}, Margin {margin:.1f}%")
+
+room_text = "\n".join(room_lines)
+
+# Generate dynamic hashtags based on current day and month
+day_of_week_en = datetime.today().strftime("%A").lower()  # e.g., thursday
+month_en = datetime.today().strftime("%B").lower()        # e.g., may
+hashtag_day = f"#axon{day_of_week_en}"
+hashtag_month = f"#axon{month_en}"
+
+# Assemble formatted report
+report_content = f"""Dạ em gửi performance Axon ads {latest_date_str}
+{total_camps_active} camp active
+Spend: ${total_cost_report:,.0f}
+ROAS: {account_sroas_report:.2f}
+Purchase: {total_orders_report:,.0f}
+
+1. Tổng quan
+- {above_roas_rep} camp có ROAS > beROAS
+- {below_roas_rep} camp có ROAS < beROAS
+
+2. Camp đang scale - {num_scaling} camp
+{scaling_text}
+
+3. Camp còn room để scale
+{room_text}
+
+#axonreport {hashtag_day} {hashtag_month}"""
+
+st.code(report_content, language="markdown")
+st.caption("📋 Click the copy button in the top-right of the code box above to instantly copy this formatted report for Slack or Telegram!")
+
+
