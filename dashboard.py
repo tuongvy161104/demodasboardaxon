@@ -306,15 +306,29 @@ def load_data(path=None, file_obj=None):
     else:
         return None
 
-    # Rename columns for clarity
-    rename_map = {
-        "shopifyOrders": "sOrders",
-        "shopifyRevenue": "sRevenue",
-        "roas": "sROAS",
-        "beRoas": "beROAS",
-        "profit": "sProfit",
-    }
-    df.rename(columns=rename_map, inplace=True)
+    # Strip whitespace from column headers to prevent spacing issues
+    df.columns = df.columns.str.strip()
+
+    # Robust, case-insensitive mapping for flexible column renaming
+    col_mapping = {}
+    for col in df.columns:
+        col_lower = col.lower().replace("_", "").replace(" ", "").replace("-", "")
+        if col_lower in ["campaignname", "campaign"]:
+            col_mapping[col] = "campaignName"
+        elif col_lower in ["cost", "spend", "adspend"]:
+            col_mapping[col] = "cost"
+        elif col_lower in ["shopifyorders", "sorders", "orders"]:
+            col_mapping[col] = "sOrders"
+        elif col_lower in ["shopifyrevenue", "srevenue", "revenue"]:
+            col_mapping[col] = "sRevenue"
+        elif col_lower in ["roas", "sroas"]:
+            col_mapping[col] = "sROAS"
+        elif col_lower in ["beroas"]:
+            col_mapping[col] = "beROAS"
+        elif col_lower in ["profit", "sprofit"]:
+            col_mapping[col] = "sProfit"
+
+    df.rename(columns=col_mapping, inplace=True)
 
     # Extract date from campaignName (format: ...- DDMMYYYY -)
     def extract_date(name):
@@ -327,10 +341,12 @@ def load_data(path=None, file_obj=None):
                 pass
         return None
 
-    df["campaign_date"] = df["campaignName"].apply(extract_date)
-
-    # Short campaign name (first segment before " - ")
-    df["campaignShort"] = df["campaignName"].apply(lambda x: str(x).split(" - ")[0])
+    if "campaignName" in df.columns:
+        df["campaign_date"] = df["campaignName"].apply(extract_date)
+        df["campaignShort"] = df["campaignName"].apply(lambda x: str(x).split(" - ")[0])
+    else:
+        df["campaign_date"] = None
+        df["campaignShort"] = "Unknown"
 
     return df
 
@@ -343,6 +359,27 @@ else:
 if df is None:
     st.error("⚠️ Could not load data. Please upload a CSV file or verify the default path.")
     st.stop()
+
+# Validate that all required columns are present in the loaded dataframe
+required_cols = ["campaignName", "cost", "sOrders", "sRevenue", "sROAS", "beROAS", "sProfit"]
+missing_cols = [col for col in required_cols if col not in df.columns]
+if missing_cols:
+    st.error(f"""
+    ### ⚠️ Missing Required Columns in CSV
+    The loaded dataset is missing the following required columns:
+    {', '.join([f'`{col}`' for col in missing_cols])}
+    
+    **Please ensure your CSV has headers corresponding to:**
+    - `campaignName` (or `Campaign`)
+    - `cost` (or `Spend` / `Ad Spend`)
+    - `shopifyOrders` (or `sOrders` / `Orders`)
+    - `shopifyRevenue` (or `sRevenue` / `Revenue`)
+    - `roas` (or `sROAS`)
+    - `beRoas` (or `beROAS`)
+    - `profit` (or `sProfit` / `Profit`)
+    """)
+    st.stop()
+
 
 # ─────────────────────────────────────────────
 # Date filtering for time-series
